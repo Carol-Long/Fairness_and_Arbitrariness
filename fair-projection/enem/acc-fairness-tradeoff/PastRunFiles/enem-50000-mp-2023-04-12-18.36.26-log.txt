@@ -1,0 +1,30 @@
+Setup Summary
+ Sampled Dataset Shape: (50000, 149)
+ repetition: 1
+ use_protected: True
+ use_sample_weight: True
+ tune_threshold: False
+ tolerance: [0.0, 0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0]
+Logit - CE - meo
+ Iteration:  1/ 1
+  Time to fit the base models: 0.183 mins
+  Tolerance: 0.0000, projection time: 0.933 mins, threshold: 0.5000, threshold time: 0.000 mins
+  Tolerance: 0.0000, DCPError!!!
+  Tolerance: 0.0010, projection time: 0.950 mins, threshold: 0.5000, threshold time: 0.000 mins
+  Tolerance: 0.0010, DCPError!!!
+  Tolerance: 0.0050, projection time: 0.933 mins, threshold: 0.5000, threshold time: 0.000 mins
+  Tolerance: 0.0050, DCPError!!!
+  Tolerance: 0.0100, projection time: 0.933 mins, threshold: 0.5000, threshold time: 0.000 mins
+  Tolerance: 0.0100, DCPError!!!
+  Tolerance: 0.0500, projection time: 0.917 mins, threshold: 0.5000, threshold time: 0.000 mins
+  Tolerance: 0.0500, DCPError!!!
+  Tolerance: 0.1000, projection time: 0.917 mins, threshold: 0.5000, threshold time: 0.000 mins
+  Tolerance: 0.1000, DCPError!!!
+  Tolerance: 0.5000, projection time: 0.933 mins, threshold: 0.5000, threshold time: 0.000 mins
+  Tolerance: 0.5000, DCPError!!!
+  Tolerance: 1.0000, projection time: 0.917 mins, threshold: 0.5000, threshold time: 0.000 mins
+  Tolerance: 1.0000, DCPError!!!
+  Epoch Time: 7.517 mins
+ Total Time: 7.517 mins
+Total Run Time: 7.517 mins
+Finished!!!

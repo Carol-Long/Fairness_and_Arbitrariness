@@ -1,0 +1,12 @@
+Setup Summary
+ Sampled Dataset Shape: (50000, 149)
+ repetition: 1
+ use_protected: True
+ use_sample_weight: True
+ tune_threshold: False
+ tolerance: [0.0, 0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0]
+Logit - CE - meo
+ Iteration:  1/ 1
+  Time to fit the base models: 0.050 mins
+  Tolerance: 0.0000, projection time: 1.000 mins, threshold: 0.5000, threshold time: 0.000 mins
+  Tolerance: 0.0000, DCPError!!!

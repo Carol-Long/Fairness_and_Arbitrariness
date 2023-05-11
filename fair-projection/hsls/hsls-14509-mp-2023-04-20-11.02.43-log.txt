@@ -1,0 +1,23 @@
+Setup Summary
+ Sampled Dataset Shape: (14509, 59)
+ repetition: 3
+ use_protected: True
+ use_sample_weight: True
+ tune_threshold: False
+ tolerance: [0.0]
+RFC - CE - meo
+ Iteration:  1/ 3
+  Time to fit the base models: 0.017 mins
+  Tolerance: 0.0000, projection time: 0.183 mins, threshold: 0.5000, threshold time: 0.000 mins
+  Epoch Time: 0.217 mins
+ Iteration:  2/ 3
+  Time to fit the base models: 0.000 mins
+  Tolerance: 0.0000, projection time: 0.183 mins, threshold: 0.5000, threshold time: 0.000 mins
+  Epoch Time: 0.183 mins
+ Iteration:  3/ 3
+  Time to fit the base models: 0.017 mins
+  Tolerance: 0.0000, projection time: 0.183 mins, threshold: 0.5000, threshold time: 0.000 mins
+  Epoch Time: 0.200 mins
+ Total Time: 0.600 mins
+Total Run Time: 0.600 mins
+Finished!!!
