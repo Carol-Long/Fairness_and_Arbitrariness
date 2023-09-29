@@ -1,9 +1,9 @@
 # Fairness_and_Arbitrariness
 The official code of **Arbitrariness Lies Beyond the Fairness-Accuracy Frontier** **(NeurIPS 2023 Spotlight)** [arXiv](https://arxiv.org/pdf/2306.09425.pdf)
----
+
 ## Abstract
 Machine learning tasks may admit multiple competing models that achieve similar performance yet produce conflicting outputs for individual samples---a phenomenon known as predictive multiplicity. We demonstrate that fairness interventions in machine learning optimized solely for group fairness and accuracy can exacerbate predictive multiplicity. Consequently, state-of-the-art fairness interventions can mask high predictive multiplicity behind favorable group fairness and accuracy metrics. We argue that a third axis of ``arbitrariness'' should be considered when deploying models to aid decision-making in applications of individual-level impact. To address this challenge, we propose an ensemble algorithm applicable to any fairness intervention that provably ensures more consistent predictions.
----
+
 ## Reproduce Results
 ### Environment
 conda create --n fair_arbitrariness python=3.8
