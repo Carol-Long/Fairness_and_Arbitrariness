@@ -12,9 +12,6 @@ from DataLoader import *
 sys.path.append('../data/HSLS')
 from hsls_utils import *
 
-# sys.path.append('../FACT-master')
-# from FACT.postprocess import *
-
 sys.path.append('../leveraging-python')
 from leveraging.utils import leveraging_approach
 from aif360.datasets import AdultDataset, GermanDataset
@@ -116,10 +113,7 @@ def main(argv):
 
     #### Run benchmarks ####
     if fair == 'reduction':
-        # eps_list = [0.001, 0.005, 0.01, 0.05, 0.1, 1, 6, 8, 10, 12] # Epsilon values for reduction method #
-        # eps_list = [0.001, 0.005, 0.01, 1, 2] doesn't work! too small
         eps_list = [0.1, 1, 4, 6, 8, 9, 10, 12] # enem
-        #eps_list = [0.01, 0.1,9,10] # for testing ensemble enem
         if constraint == 'sp':
             results, compiled_scores_list, compiled_scores_valid_list = bm.reduction(model, num_iter, seed, params=eps_list, constraint='DemographicParity')
         elif constraint == 'eo':
@@ -128,21 +122,13 @@ def main(argv):
     elif fair == 'eqodds':
         results, compiled_scores_list, compiled_scores_valid_list = bm.eqodds(model, num_iter, seed)
         constraint = ''
-    
-    elif fair == 'caleqodds': 
-        results = bm.eqodds(model, num_iter, seed, calibrated=True, constraint=constraint)
-        constraint = ''
         
     elif fair == 'roc':
-        #eps_list = [0.001, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2] # Metric ub and lb values for roc method #
         eps_list = [0.001, 0.01, 0.05, 0.1, 0.2, 0.5, 1, 2]
         if constraint == 'sp':
             results, compiled_scores_list, compiled_scores_valid_list  = bm.roc(model, num_iter, seed, params=eps_list, constraint='DemographicParity')
         elif constraint == 'eo':
             results, compiled_scores_list, compiled_scores_valid_list = bm.roc(model, num_iter, seed, params=eps_list, constraint='EqualizedOdds')
-
-    elif fair == 'fact':
-        results = post_process(model, inputfile)
         
     elif fair == 'leveraging':
         _, results, _, compiled_scores_list, compiled_scores_valid_list = leveraging_approach(df, protected_attrs, label_name, use_protected=True, model = model, num_iter = num_iter, rand_seed =seed)
