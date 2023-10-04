@@ -38,10 +38,9 @@ e.g.,
 Fairness methods include EqOdds [4], LevEqOpp [5], Reduction [6], and Rejection [7]. Original means no fairness intervention is applied.
 
 #### `experimental-results/`: stores all baseline and fair model scores and predictions as pickle files.
-#### `experimental-results/[input dataset]/*.ipynb`: explores and visualizes the experimental results.
 
 ## Arbitrariness (multiplicity) analysis
-
+#### `multiplicity-analysis/all_plots.ipynb`: contains reproducible figures for the paper.
 
 
 ## Reference
