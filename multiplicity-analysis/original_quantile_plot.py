@@ -14,6 +14,63 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
+# plot score_std quantile for fair and unfair bins, use 10 data splits to get error bar
+# percentile list per iteration
+def plot_quantile_score_std(data, method_score,bins):
+    # method_score: score_reduction, score_rejection, etc
+    v_plot_list = [] 
+    bin_meo = []
+    bin_acc = []
+    for i in range(10):
+
+        meo_list, acc_list = get_eo_acc(data, method_score[i],i)
+    
+        # Define the x and y data
+        x_list = meo_list
+        y_list = acc_list
+    
+        # Bin the x and y values
+        x_bin_indices = np.digitize(x_list, x_bins)
+        y_bin_indices = np.digitize(y_list, y_bins)
+    
+        # Calculate the bin labels for each point
+        bin_labels = (x_bin_indices - 1) * num_bins + y_bin_indices
+        # option: score_reduction, score_rejection
+        bin_scores_dic = {label: [(elem,meo,acc) for elem, meo, acc, label_elem 
+                                  in zip(method_score[i], meo_list, acc_list, bin_labels) 
+                                  if label_elem == label] for label in set(bin_labels)}
+        # fair bins
+        score_list_fair = []
+        for bin_num in bins:
+            if bin_num in bin_scores_dic.keys():
+                #print(len(bin_scores_dic[bin_num]))
+                for modeltuple in bin_scores_dic[bin_num]:
+                    score_list_fair.append(np.squeeze(modeltuple[0]))
+                    bin_meo.append(modeltuple[1])
+                    bin_acc.append(modeltuple[2])
+        # not enough model to calculate std
+        if len(score_list_fair)<5:
+            #print("reduction\n")
+            #print("number of models in bin {} for iteration {} is {} and <5".format(str(bins),i,len(score_list_fair)))
+            continue
+        score_list_reshaped = np.squeeze(score_list_fair) # num_model* len(scores)
+        score_sd_per_sample = pd.DataFrame(score_list_reshaped).std() # len(scores)*1
+        #assert(score_sd_per_sample.shape == (7500,))
+       
+        # get percentile score_std for each group
+        t = np.linspace(0,1,100)
+        v = [score_sd_per_sample.quantile(t_ix) for t_ix in t] # |t|* |protected_attrs|
+        v_plot_list.append(v)
+      
+    # print(np.array(v_plot_list).shape) -> (10, 100, 2)
+    # plot mean and std across itr
+    v_plot_mean = np.mean(v_plot_list,axis = 0) # (100,2)
+    v_plot_std = np.std(v_plot_list, axis = 0, ddof=1) # (100, 2)
+    EO_level = np.mean(bin_meo)
+    Acc_level = np.mean(bin_acc)
+    return t, v_plot_mean,v_plot_std,EO_level,Acc_level
+
+
 # option: hsls/enem/adult
 data = "enem"
 fig, ax = plt.subplots(1, 1, figsize=(6.3, 3.5))
@@ -74,73 +131,7 @@ elif data == "adult":
         bins = [12,13,20,21,28,28]
 
 
-# plot score_std quantile for fair and unfair bins, use 10 data splits to get error bar
-#percentile list per iteration
-v_plot_list = [] 
-bin_meo = []
-bin_acc = []
-for i in range(10):
-    # option: score_reduction, score_rejection
-    meo_list, acc_list = get_eo_acc(data, score_reduction[i],i)
-
-    # Define the x and y data
-    x_list = meo_list
-    y_list = acc_list
-
-    # Bin the x and y values
-    x_bin_indices = np.digitize(x_list, x_bins)
-    y_bin_indices = np.digitize(y_list, y_bins)
-
-    # Calculate the bin labels for each point
-    bin_labels = (x_bin_indices - 1) * num_bins + y_bin_indices
-    # option: score_reduction, score_rejection
-    bin_scores_dic = {label: [(elem,meo,acc) for elem, meo, acc, label_elem in zip(score_reduction[i], meo_list, acc_list, bin_labels) if label_elem == label] for label in set(bin_labels)}
-    
-    # fair bins
-    score_list_fair = []
-    for bin_num in bins:
-        if bin_num in bin_scores_dic.keys():
-            #print(len(bin_scores_dic[bin_num]))
-            for modeltuple in bin_scores_dic[bin_num]:
-                score_list_fair.append(np.squeeze(modeltuple[0]))
-                bin_meo.append(modeltuple[1])
-                bin_acc.append(modeltuple[2])
-        #else:
-            #print("no model in bin {}  for itr".format(str(bin_num)) + str(i))
-    if len(score_list_fair)<5:
-        print("reduction\n")
-        print("number of models in bin {} for iteration {} is {} and <5".format(str(bins),i,len(score_list_fair)))
-        continue
-    score_list_reshaped = np.squeeze(score_list_fair) # num_model* len(scores)
-    score_sd_per_sample = pd.DataFrame(score_list_reshaped).std() # len(scores)*1
-    #assert(score_sd_per_sample.shape == (7500,))
-   
-    # get percentile score_std for each group
-    t = np.linspace(0,1,100)
-    v = [score_sd_per_sample.quantile(t_ix) for t_ix in t] # |t|* |protected_attrs|
-    v_plot_list.append(v)
-  
-# print(np.array(v_plot_list).shape) -> (10, 100, 2)
-# plot mean and std across itr
-v_plot_mean = np.mean(v_plot_list,axis = 0) # (100,2)
-v_plot_std = np.std(v_plot_list, axis = 0, ddof=1) # (100, 2)
-
-# =============================================================================
-# t = np.linspace(0,1,100)
-# # get the corresponding eo_range and acc_range for the bins
-# x_bin_start = x_bins[int(bins[0] / num_bins)]
-# x_bin_end =  x_bins[int(bins[0] / num_bins)]  + (int(bins[-1] / num_bins) - int(bins[0] / num_bins) + 1) * (x_bins[-1]-x_bins[-2])
-# y_bin_start = y_bins[bins[0] % num_bins-1] 
-# if bins[-1] % num_bins == 0:
-#     y_bin_end = y_bins[bins[0] % num_bins-1]  + (num_bins - bins[0] % num_bins + 1) * (y_bins[-1]-y_bins[-2])
-# else:
-#     y_bin_end = y_bins[bins[0] % num_bins-1]  + (bins[-1] % num_bins - bins[0] % num_bins+1) * (y_bins[-1]-y_bins[-2])
-# 
-# EO_level = (x_bin_start+x_bin_end)/2
-# Acc_level = (y_bin_start+y_bin_end)/2
-# =============================================================================
-EO_level = np.mean(bin_meo)
-Acc_level = np.mean(bin_acc)
+t, v_plot_mean,v_plot_std,EO_level,Acc_level = plot_quantile_score_std(data, score_reduction,bins)
 ax.plot( v_plot_mean, t, label = "Reduction High Fair(Acc:{:.3f}, Mean EO:{:.2f})".format(Acc_level,EO_level))
 ax.fill_betweenx(t, v_plot_mean+ v_plot_std, np.where(v_plot_mean - v_plot_std<0, 0, v_plot_mean - v_plot_std),  alpha=0.2)
 
@@ -166,64 +157,8 @@ elif data == "adult":
     elif model_base == "gbm":
         bins = [28,29,36,37,38,39,44,45,46]
     
-# plot score_std quantile for low-fairness bins, use 10 data splits to get error bar
-#percentile list per iteration
-v_plot_list = [] 
-for i in range(10):
-    # option: score_reduction, score_rejection
-    meo_list, acc_list = get_eo_acc(data, score_reduction[i],i)
 
-    # Define the x and y data
-    x_list = meo_list
-    y_list = acc_list
-
-    # Bin the x and y values
-    x_bin_indices = np.digitize(x_list, x_bins)
-    y_bin_indices = np.digitize(y_list, y_bins)
-
-    # Calculate the bin labels for each point
-    bin_labels = (x_bin_indices - 1) * num_bins + y_bin_indices
-    # option: score_reduction, score_rejection
-    bin_scores_dic = {label: [elem for elem, label_elem in zip(score_reduction[i], bin_labels) if label_elem == label] for label in set(bin_labels)}
-    
-    # fair bins
-    score_list_fair = []
-    for bin_num in bins:
-        if bin_num in bin_scores_dic.keys():
-            #print(len(bin_scores_dic[bin_num]))
-            for model in bin_scores_dic[bin_num]:
-                score_list_fair.append(np.squeeze(model))
-        #else:
-            #print("no model in bin {}  for itr".format(str(bin_num)) + str(i))
-    if len(score_list_fair)<5:
-        print("number of models in bin {} for iteration {} is {} and <5".format(str(bins),i,len(score_list_fair)))
-        continue
-    score_list_reshaped = np.squeeze(score_list_fair) # num_model* len(scores)
-    score_sd_per_sample = pd.DataFrame(score_list_reshaped).std() # len(scores)*1
-    #assert(score_sd_per_sample.shape == (7500,))
-   
-    # get percentile score_std for each group
-    t = np.linspace(0,1,100)
-    v = [score_sd_per_sample.quantile(t_ix) for t_ix in t] # |t|* |protected_attrs|
-    v_plot_list.append(v)
-  
-# print(np.array(v_plot_list).shape) -> (10, 100, 2)
-# plot mean and std across itr
-v_plot_mean = np.mean(v_plot_list,axis = 0) # (100,2)
-v_plot_std = np.std(v_plot_list, axis = 0, ddof=1) # (100, 2)
-
-t = np.linspace(0,1,100)
-# get the corresponding eo_range and acc_range for the bins
-x_bin_start = x_bins[int(bins[0] / num_bins)]
-x_bin_end =  x_bins[int(bins[0] / num_bins)]  + (int(bins[-1] / num_bins) - int(bins[0] / num_bins) + 1) * (x_bins[-1]-x_bins[-2])
-y_bin_start = y_bins[bins[0] % num_bins-1] 
-if bins[-1] % num_bins == 0:
-    y_bin_end = y_bins[bins[0] % num_bins-1]  + (num_bins - bins[0] % num_bins + 1) * (y_bins[-1]-y_bins[-2])
-else:
-    y_bin_end = y_bins[bins[0] % num_bins-1]  + (bins[-1] % num_bins - bins[0] % num_bins+1) * (y_bins[-1]-y_bins[-2])
-
-EO_level = (x_bin_start+x_bin_end)/2
-Acc_level = (y_bin_start+y_bin_end)/2
+t, v_plot_mean,v_plot_std,EO_level,Acc_level = plot_quantile_score_std(data, score_reduction,bins)
 ax.plot( v_plot_mean, t, label = "Reduction Low Fair(Acc:{:.3f}, Mean EO:{:.2f})".format(Acc_level,EO_level))
 ax.fill_betweenx(t, v_plot_mean+ v_plot_std, np.where(v_plot_mean - v_plot_std<0, 0, v_plot_mean - v_plot_std),  alpha=0.2)
 
@@ -233,65 +168,7 @@ if data == "enem":
     if model_base == "rf":
         bins = [5,6]  
 
-    
-# plot score_std quantile for original-fairness bins, use 10 data splits to get error bar
-#percentile list per iteration
-v_plot_list = [] 
-for i in range(10):
-    meo_list, acc_list = get_eo_acc(data, score_rejection[i],i)
-
-    # Define the x and y data
-    x_list = meo_list
-    y_list = acc_list
-
-    # Bin the x and y values
-    x_bin_indices = np.digitize(x_list, x_bins)
-    y_bin_indices = np.digitize(y_list, y_bins)
-
-    # Calculate the bin labels for each point
-    bin_labels = (x_bin_indices - 1) * num_bins + y_bin_indices
-    bin_scores_dic = {label: [elem for elem, label_elem in zip(score_rejection[i], bin_labels) if label_elem == label] for label in set(bin_labels)}
-    
-    # fair bins
-    score_list_fair = []
-    for bin_num in bins:
-        if bin_num in bin_scores_dic.keys():
-            #print(len(bin_scores_dic[bin_num]))
-            for model in bin_scores_dic[bin_num]:
-                score_list_fair.append(np.squeeze(model))
-        #else:
-            #print("no model in bin {}  for itr".format(str(bin_num)) + str(i))
-    if len(score_list_fair)<5:
-        print("rejection\n")
-        print("number of models in bin {} for iteration {} is {} and <5".format(str(bins),i,len(score_list_fair)))
-        continue
-    score_list_reshaped = np.squeeze(score_list_fair) # num_model* len(scores)
-    score_sd_per_sample = pd.DataFrame(score_list_reshaped).std() # len(scores)*1
-    #assert(score_sd_per_sample.shape == (7500,))
-   
-    # get percentile score_std for each group
-    t = np.linspace(0,1,100)
-    v = [score_sd_per_sample.quantile(t_ix) for t_ix in t] # |t|* |protected_attrs|
-    v_plot_list.append(v)
-  
-# print(np.array(v_plot_list).shape) -> (10, 100, 2)
-# plot mean and std across itr
-v_plot_mean = np.mean(v_plot_list,axis = 0) # (100,2)
-v_plot_std = np.std(v_plot_list, axis = 0, ddof=1) # (100, 2)
-
-t = np.linspace(0,1,100)
-# get the corresponding eo_range and acc_range for the bins
-
-x_bin_start = x_bins[int(bins[0] / num_bins)]
-x_bin_end =  x_bins[int(bins[0] / num_bins)]  + (int(bins[-1] / num_bins) - int(bins[0] / num_bins) + 1) * (x_bins[-1]-x_bins[-2])
-y_bin_start = y_bins[bins[0] % num_bins-1] 
-if bins[-1] % num_bins == 0:
-    y_bin_end = y_bins[bins[0] % num_bins-1]  + (num_bins - bins[0] % num_bins + 1) * (y_bins[-1]-y_bins[-2])
-else:
-    y_bin_end = y_bins[bins[0] % num_bins-1]  + (bins[-1] % num_bins - bins[0] % num_bins+1) * (y_bins[-1]-y_bins[-2])
-
-EO_level = (x_bin_start+x_bin_end)/2
-Acc_level = (y_bin_start+y_bin_end)/2
+t, v_plot_mean,v_plot_std,EO_level,Acc_level = plot_quantile_score_std(data, score_rejection,bins)
 ax.plot( v_plot_mean, t, label = "Rejection High Fair(Acc:{:.3f}, Mean EO:{:.2f})".format(Acc_level,EO_level))
 ax.fill_betweenx(t, v_plot_mean+ v_plot_std, np.where(v_plot_mean - v_plot_std<0, 0, v_plot_mean - v_plot_std),  alpha=0.2)
 
@@ -300,65 +177,7 @@ if data == "enem":
     if model_base == "rf":
         bins = [54,55,62,63]  
 
-    
-# plot score_std quantile for original-fairness bins, use 10 data splits to get error bar
-#percentile list per iteration
-v_plot_list = [] 
-for i in range(10):
-    meo_list, acc_list = get_eo_acc(data, score_rejection[i],i)
-
-    # Define the x and y data
-    x_list = meo_list
-    y_list = acc_list
-
-    # Bin the x and y values
-    x_bin_indices = np.digitize(x_list, x_bins)
-    y_bin_indices = np.digitize(y_list, y_bins)
-
-    # Calculate the bin labels for each point
-    bin_labels = (x_bin_indices - 1) * num_bins + y_bin_indices
-    bin_scores_dic = {label: [elem for elem, label_elem in zip(score_rejection[i], bin_labels) if label_elem == label] for label in set(bin_labels)}
-    
-    # fair bins
-    score_list_fair = []
-    for bin_num in bins:
-        if bin_num in bin_scores_dic.keys():
-            #print(len(bin_scores_dic[bin_num]))
-            for model in bin_scores_dic[bin_num]:
-                score_list_fair.append(np.squeeze(model))
-        #else:
-            #print("no model in bin {}  for itr".format(str(bin_num)) + str(i))
-    if len(score_list_fair)<5:
-        print("rejection\n")
-        print("number of models in bin {} for iteration {} is {} and <5".format(str(bins),i,len(score_list_fair)))
-        continue
-    score_list_reshaped = np.squeeze(score_list_fair) # num_model* len(scores)
-    score_sd_per_sample = pd.DataFrame(score_list_reshaped).std() # len(scores)*1
-    #assert(score_sd_per_sample.shape == (7500,))
-   
-    # get percentile score_std for each group
-    t = np.linspace(0,1,100)
-    v = [score_sd_per_sample.quantile(t_ix) for t_ix in t] # |t|* |protected_attrs|
-    v_plot_list.append(v)
-  
-# print(np.array(v_plot_list).shape) -> (10, 100, 2)
-# plot mean and std across itr
-v_plot_mean = np.mean(v_plot_list,axis = 0) # (100,2)
-v_plot_std = np.std(v_plot_list, axis = 0, ddof=1) # (100, 2)
-
-t = np.linspace(0,1,100)
-# get the corresponding eo_range and acc_range for the bins
-
-x_bin_start = x_bins[int(bins[0] / num_bins)]
-x_bin_end =  x_bins[int(bins[0] / num_bins)]  + (int(bins[-1] / num_bins) - int(bins[0] / num_bins) + 1) * (x_bins[-1]-x_bins[-2])
-y_bin_start = y_bins[bins[0] % num_bins-1] 
-if bins[-1] % num_bins == 0:
-    y_bin_end = y_bins[bins[0] % num_bins-1]  + (num_bins - bins[0] % num_bins + 1) * (y_bins[-1]-y_bins[-2])
-else:
-    y_bin_end = y_bins[bins[0] % num_bins-1]  + (bins[-1] % num_bins - bins[0] % num_bins+1) * (y_bins[-1]-y_bins[-2])
-
-EO_level = (x_bin_start+x_bin_end)/2
-Acc_level = (y_bin_start+y_bin_end)/2
+t, v_plot_mean,v_plot_std,EO_level,Acc_level = plot_quantile_score_std(data, score_rejection,bins)
 ax.plot( v_plot_mean, t, label = "Rejection Low Fair(Acc:{:.3f}, Mean EO:{:.2f})".format(Acc_level,EO_level))
 ax.fill_betweenx(t, v_plot_mean+ v_plot_std, np.where(v_plot_mean - v_plot_std<0, 0, v_plot_mean - v_plot_std),  alpha=0.2)
 
@@ -385,65 +204,7 @@ elif data =="adult":
     elif model_base == "gbm":
         bins = [52,53,54,60,61,62]
 
-    
-# plot score_std quantile for original-fairness bins, use 10 data splits to get error bar
-#percentile list per iteration
-v_plot_list = [] 
-for i in range(10):
-    meo_list, acc_list = get_eo_acc(data, score_original[i],i)
-
-    # Define the x and y data
-    x_list = meo_list
-    y_list = acc_list
-
-    # Bin the x and y values
-    x_bin_indices = np.digitize(x_list, x_bins)
-    y_bin_indices = np.digitize(y_list, y_bins)
-
-    # Calculate the bin labels for each point
-    bin_labels = (x_bin_indices - 1) * num_bins + y_bin_indices
-    bin_scores_dic = {label: [elem for elem, label_elem in zip(score_original[i], bin_labels) if label_elem == label] for label in set(bin_labels)}
-    
-    # fair bins
-    score_list_fair = []
-    for bin_num in bins:
-        if bin_num in bin_scores_dic.keys():
-            #print(len(bin_scores_dic[bin_num]))
-            for model in bin_scores_dic[bin_num]:
-                score_list_fair.append(np.squeeze(model))
-        #else:
-            #print("no model in bin {}  for itr".format(str(bin_num)) + str(i))
-    if len(score_list_fair)<5:
-        print("baseline\n")
-        print("number of models in bin {} for iteration {} is {} and <5".format(str(bins),i,len(score_list_fair)))
-        continue
-    score_list_reshaped = np.squeeze(score_list_fair) # num_model* len(scores)
-    score_sd_per_sample = pd.DataFrame(score_list_reshaped).std() # len(scores)*1
-    #assert(score_sd_per_sample.shape == (7500,))
-   
-    # get percentile score_std for each group
-    t = np.linspace(0,1,100)
-    v = [score_sd_per_sample.quantile(t_ix) for t_ix in t] # |t|* |protected_attrs|
-    v_plot_list.append(v)
-  
-# print(np.array(v_plot_list).shape) -> (10, 100, 2)
-# plot mean and std across itr
-v_plot_mean = np.mean(v_plot_list,axis = 0) # (100,2)
-v_plot_std = np.std(v_plot_list, axis = 0, ddof=1) # (100, 2)
-
-t = np.linspace(0,1,100)
-# get the corresponding eo_range and acc_range for the bins
-
-x_bin_start = x_bins[int(bins[0] / num_bins)]
-x_bin_end =  x_bins[int(bins[0] / num_bins)]  + (int(bins[-1] / num_bins) - int(bins[0] / num_bins) + 1) * (x_bins[-1]-x_bins[-2])
-y_bin_start = y_bins[bins[0] % num_bins-1] 
-if bins[-1] % num_bins == 0:
-    y_bin_end = y_bins[bins[0] % num_bins-1]  + (num_bins - bins[0] % num_bins + 1) * (y_bins[-1]-y_bins[-2])
-else:
-    y_bin_end = y_bins[bins[0] % num_bins-1]  + (bins[-1] % num_bins - bins[0] % num_bins+1) * (y_bins[-1]-y_bins[-2])
-
-EO_level = (x_bin_start+x_bin_end)/2
-Acc_level = (y_bin_start+y_bin_end)/2
+t, v_plot_mean,v_plot_std,EO_level,Acc_level = plot_quantile_score_std(data, score_original,bins)
 ax.plot( v_plot_mean, t, label = "Baseline (Acc:{:.3f}, Mean EO:{:.2f})".format(Acc_level,EO_level))
 ax.fill_betweenx(t, v_plot_mean+ v_plot_std, v_plot_mean - v_plot_std,  alpha=0.2)
 
@@ -457,75 +218,16 @@ if data =="hsls":
     #bins = [29,36,37,38,39,44,45]
     if model_base == "rf":
         bins = [35,36,37,38,39]
-
-    
-# plot score_std quantile for original-fairness bins, use 10 data splits to get error bar
-#percentile list per iteration
-v_plot_list = [] 
-for i in range(10):
-    meo_list, acc_list = get_eo_acc(data, score_threshold_original[i],i)
-
-    # Define the x and y data
-    x_list = meo_list
-    y_list = acc_list
-
-    # Bin the x and y values
-    x_bin_indices = np.digitize(x_list, x_bins)
-    y_bin_indices = np.digitize(y_list, y_bins)
-
-    # Calculate the bin labels for each point
-    bin_labels = (x_bin_indices - 1) * num_bins + y_bin_indices
-    bin_scores_dic = {label: [elem for elem, label_elem in zip(score_threshold_original[i], bin_labels) if label_elem == label] for label in set(bin_labels)}
-    
-    # fair bins
-    score_list_fair = []
-    for bin_num in bins:
-        if bin_num in bin_scores_dic.keys():
-            #print(len(bin_scores_dic[bin_num]))
-            for model in bin_scores_dic[bin_num]:
-                score_list_fair.append(np.squeeze(model))
-        #else:
-            #print("no model in bin {}  for itr".format(str(bin_num)) + str(i))
-    if len(score_list_fair)<5:
-        print("thresholded baseline\n")
-        print("number of models in bin {} for iteration {} is {} and <5".format(str(bins),i,len(score_list_fair)))
-        continue
-    score_list_reshaped = np.squeeze(score_list_fair) # num_model* len(scores)
-    score_sd_per_sample = pd.DataFrame(score_list_reshaped).std() # len(scores)*1
-    #assert(score_sd_per_sample.shape == (7500,))
-   
-    # get percentile score_std for each group
-    t = np.linspace(0,1,100)
-    v = [score_sd_per_sample.quantile(t_ix) for t_ix in t] # |t|* |protected_attrs|
-    v_plot_list.append(v)
-  
-# print(np.array(v_plot_list).shape) -> (10, 100, 2)
-# plot mean and std across itr
-v_plot_mean = np.mean(v_plot_list,axis = 0) # (100,2)
-v_plot_std = np.std(v_plot_list, axis = 0, ddof=1) # (100, 2)
-
-t = np.linspace(0,1,100)
-# get the corresponding eo_range and acc_range for the bins
-
-x_bin_start = x_bins[int(bins[0] / num_bins)]
-x_bin_end =  x_bins[int(bins[0] / num_bins)]  + (int(bins[-1] / num_bins) - int(bins[0] / num_bins) + 1) * (x_bins[-1]-x_bins[-2])
-y_bin_start = y_bins[bins[0] % num_bins-1] 
-if bins[-1] % num_bins == 0:
-    y_bin_end = y_bins[bins[0] % num_bins-1]  + (num_bins - bins[0] % num_bins + 1) * (y_bins[-1]-y_bins[-2])
-else:
-    y_bin_end = y_bins[bins[0] % num_bins-1]  + (bins[-1] % num_bins - bins[0] % num_bins+1) * (y_bins[-1]-y_bins[-2])
-
-EO_level = (x_bin_start+x_bin_end)/2
-Acc_level = (y_bin_start+y_bin_end)/2
+t, v_plot_mean,v_plot_std,EO_level,Acc_level = plot_quantile_score_std(data, score_threshold_original,bins)
 ax.plot( v_plot_mean, t, label = "Thresholded Baseline (Acc:{:.3f}, Mean EO:{:.2f})".format(Acc_level,EO_level))
 ax.fill_betweenx(t, v_plot_mean+ v_plot_std, np.where(v_plot_mean - v_plot_std<0, 0, v_plot_mean - v_plot_std),  alpha=0.2)
 
 plt.xlabel('Classifier Score Std.')
 plt.ylabel('Quantiles of Score Std.')
-title = '{} Score Std Red '.format(data) 
+title = '{} Quantiles of Score Std'.format(data) 
 #plt.title(title)
 plt.legend(loc='lower right')
 plt.tight_layout()
-#plt.show()
-plt.savefig(title + model_base + 'high_low.pdf', dpi=300)
+plt.show()
+#plt.savefig(title + '.pdf', dpi=300)
 
