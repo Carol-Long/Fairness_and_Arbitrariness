@@ -108,7 +108,7 @@ elif data =="adult":
 x_bins = np.linspace(x_range[0], x_range[1], num_bins + 1)
 y_bins = np.linspace(y_range[0], y_range[1], num_bins + 1)
 
-
+# bins and quantization can be explored in `experimental-results/[input dataset]/*.ipynb`
 # high fairness bins
 if data == "enem":
     if model_base == "rf":
