@@ -553,8 +553,48 @@ def process_scores_per_itr(dataset, model, fair='eo', start_seed = 33, end_seed 
 
     return score_original, score_hardt, score_reduction, score_rejection, score_leverage, score_mp
 
+def process_red_original_scores_per_itr(dataset, model, fair='eo', start_seed = 33, end_seed = 42):
+    # return dic {eps1:[[from itr1], [from itr2], [from itr3]], eps2:...} 
+    # or list [[from itr1], [from itr2], ...]
+    # [from itr_i]: num_seed x score_list
+    score_original = []
+    score_reduction = []        
+    for seed in range(start_seed, end_seed+1):
+        if dataset == "enem":
+            original, reduction = load_enem_original_reduction_scores(model, fair, seed)
+            score_original.append(original)
+            score_reduction.append(reduction)
+        elif dataset == "hsls":
+            reduction  =  load_hsls_reduction_scores(model, fair, seed)
+            score_reduction.append(reduction)
+    if dataset=="hsls":
+        for seed in range(33,43):
+            original = load_hsls_original_scores(model,fair,seed)
+            score_original.append(original)
+    # reorg score to prep for multiplicity
+    score_original = process_pkl_no_eps(score_original)
+    score_reduction = pool_models_per_itr(score_reduction)
+    return score_original, score_reduction
 
+def load_enem_original_reduction_scores(model, fair = 'eo', seed = 42):
+    with open('enem/benchmarks/results/scores_reduction_'+model+'_s{}_itr10_eo.pkl'.format(seed), 'rb+') as f: 
+        enem_reduction_eo = pickle.load(f)
+    
+    with open('enem/benchmarks/results/scores_original_'+model+'_s{}_itr10_.pkl'.format(seed), 'rb+') as f: 
+        enem_original = pickle.load(f)
+    
+    return enem_original, enem_reduction_eo
 
+def load_hsls_reduction_scores(model, fair = 'eo', seed = 42):
+    with open('hsls/results/scores_reduction_'+model+'_s{}_itr10_eo.pkl'.format(seed), 'rb+') as f: 
+        hsls_reduction_eo = pickle.load(f)
+
+def load_hsls_original_scores(model, fair = 'eo', seed = 42):
+    
+    with open('hsls/results/scores_original_'+model+'_s{}_itr10_.pkl'.format(seed), 'rb+') as f: 
+        hsls_original = pickle.load(f)
+    
+    return hsls_original
 
 def plot_dataset_multiplicity(dataset, model, ax=None, fair='eo', mp_name='ce', 
                                     start_seed = 33, end_seed = 42, alpha = 0.5, quantile = .8): 
